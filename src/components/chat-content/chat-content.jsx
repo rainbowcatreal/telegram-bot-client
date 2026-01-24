@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import classNames from "classnames";
 import { getProfileLink } from "../../lib/assets";
+import { getChatMembersCount } from "../../lib/chat-info";
 import "./chat-content.css";
 import MessageInput from "../message-input/message-input";
 import sendMessage from "../../lib/send-message";
@@ -8,6 +9,7 @@ import sendMessage from "../../lib/send-message";
 const ChatContent = (props) => {
 	const [messages, setMessages] = useState({});
 	const [chatNames, setChatNames] = useState({});
+	const [chatMembersCount, setChatMembersCount] = useState({});
 	const scrollRef = useRef(null);
 
 	useEffect(() => {
@@ -26,6 +28,13 @@ const ChatContent = (props) => {
 					[cid]:
 						msg.chat.title || msg.chat.first_name || "Unknown chat",
 				}));
+
+				getChatMembersCount(props.token, cid).then((count) => {
+					setChatMembersCount((prev) => ({
+						...prev,
+						[cid]: count,
+					}));
+				});
 
 				setMessages((prev) => {
 					const currentChatMsgs = prev[cid] || [];
@@ -102,23 +111,12 @@ const ChatContent = (props) => {
 					Select a chat to start messaging
 				</div>
 			) : currentMessages.length === 0 ? (
-				<>
-					<div className="chat-header">
-						<h1>{chatNames[props.chatId]}</h1>
-					</div>
-					<div className="no-messages">No messages here yet...</div>
-					<div className="message-input-container">
-						<MessageInput
-							chatName={chatNames[props.chatId]}
-							token={props.token}
-							onSendMessage={handleSendMessage}
-						/>
-					</div>
-				</>
+				<div className="no-messages">No messages here yet...</div>
 			) : (
 				<>
 					<div className="chat-header">
 						<h1>{chatNames[props.chatId]}</h1>
+						<span>{chatMembersCount[props.chatId]} members</span>
 					</div>
 					<div className="messages-list">
 						{currentMessages.map((msg) =>

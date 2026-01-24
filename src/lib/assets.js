@@ -1,4 +1,4 @@
-export const getProfileLink = async (token, chatId, isGroup) => {
+const getProfileLink = async (token, chatId, isGroup) => {
 	try {
 		const method = isGroup ? "getChat" : "getUserProfilePhotos";
 		const params = isGroup
@@ -34,3 +34,5 @@ export const getProfileLink = async (token, chatId, isGroup) => {
 	}
 	return null;
 };
+
+export { getProfileLink };
