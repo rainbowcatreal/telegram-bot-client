@@ -79,13 +79,31 @@ const ChatContent = (props) => {
 
 	useEffect(() => {
 		if (scrollRef.current) {
-			// "smooth" makes it glide, "auto" makes it instant
+			// Note for me: "smooth" makes it glide, "auto" makes it instant
 			scrollRef.current.scrollIntoView({ behavior: "smooth" });
 		}
 	}, [messages, props.chatId]);
 
+
+	function scrollToMessage(targetId) {
+		const element = document.getElementById(`msg-${targetId}`);
+		console.log(element, targetId);
+		if (element) {
+			element.scrollIntoView({
+				behavior: "smooth",
+				block: "center",
+			});
+			element.classList.add("highlight-flash");
+			setTimeout(() => {
+				element.classList.remove("highlight-flash");
+			}, 2000);
+		} else {
+			console.warn("Message to jump not found");
+		}
+	};
+
 	async function handleSendMessage(toSend) {
-		await sendMessage(props.token, {
+		const data = await sendMessage(props.token, {
 			chat_id: props.chatId,
 			text: toSend,
 		});
@@ -94,7 +112,7 @@ const ChatContent = (props) => {
 			[props.chatId]: [
 				...(prev[props.chatId] || []),
 				{
-					message_id: Date.now(),
+					message_id: data.message_id,
 					text: toSend,
 					from: { me: true },
 				},
@@ -123,6 +141,7 @@ const ChatContent = (props) => {
 							msg.from.me ? (
 								<div
 									key={msg.message_id}
+									id={`msg-${msg.message_id}`}
 									className={classNames("message", {
 										sent: true,
 									})}>
@@ -135,6 +154,7 @@ const ChatContent = (props) => {
 							) : (
 								<div
 									key={msg.message_id}
+									id={`msg-${msg.message_id}`}
 									className="message">
 									<div className="message-avatar">
 										{msg.photoUrl ? (
@@ -151,6 +171,19 @@ const ChatContent = (props) => {
 										<span className="sender-name">
 											{msg.from?.first_name}
 										</span>
+										{msg.reply_to_message && (
+											<div
+												className="reply-message"
+												onClick={() => scrollToMessage(msg.reply_to_message.message_id)}
+                    							style={{ cursor: "pointer" }}
+											>
+												<span className="reply-name">
+													{msg.reply_to_message.from?.first_name || "Unknown"}
+												</span>
+												<br />
+												{msg.reply_to_message.text}
+											</div>
+										)}
 										<p className="message-text">
 											{msg.text}
 										</p>

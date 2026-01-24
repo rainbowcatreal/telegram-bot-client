@@ -7,7 +7,7 @@ const sendMessage = async (token, body) => {
 		body: JSON.stringify(body)
 	});
 	const data = await response.json();
-	return data;
+	return data.result;
 }
 
 export default sendMessage;
