@@ -87,7 +87,6 @@ const ChatContent = (props) => {
 
 	function scrollToMessage(targetId) {
 		const element = document.getElementById(`msg-${targetId}`);
-		console.log(element, targetId);
 		if (element) {
 			element.scrollIntoView({
 				behavior: "smooth",
