@@ -77,3 +77,11 @@
 	justify-content: center;
 	font-size: 12px;
 }
+
+.reply-to-message-container {
+	display: block;
+}
+
+.controls {
+	display: flex;
+}

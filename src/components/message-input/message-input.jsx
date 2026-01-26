@@ -18,6 +18,9 @@ const MessageInput = (props) => {
 			setInput("");
 			setPhotos([]);
 			setDocuments([]);
+			if (props.replyToMessageData && props.setReplyToMessageData) {
+				props.setReplyToMessageData(null);
+			}
 			setDisabled(false);
 		}
 	}
@@ -43,57 +46,74 @@ const MessageInput = (props) => {
 
 	return (
 		<>
-			<input
-				type="file"
-				id="photo-upload"
-				multiple
-				accept="image/*"
-				style={{ display: "none" }}
-				onChange={handlePhotoUploadChange}
-			/>
-			<label
-				htmlFor="photo-upload"
-				className="attach-button">
-				<img src={photoIcon} />
-				{photos.length > 0 && (
-					<span className="badge">{photos.length}</span>
+			<div className="reply-to-message-container">
+				{props.replyToMessageData && (
+					<div className="reply-message">
+						<span className="reply-name">
+							{props.replyToMessageData.from?.first_name ?
+								`Reply to ${props.replyToMessageData.from.first_name}` :
+								"Reply to message"}
+						</span>
+						<br />
+						<span className="reply-text">
+							{props.replyToMessageData.text || props.replyToMessageData.caption || "No text"}
+						</span>
+					</div>
 				)}
-			</label>
-
-			<input
-				type="file"
-				id="document-upload"
-				multiple
-				style={{ display: "none" }}
-				onChange={handleDocumentUploadChange}
-			/>
-			<label
-				htmlFor="document-upload"
-				className="attach-button">
-				<img src={documentIcon} />
-				{documents.length > 0 && (
-					<span className="badge">{documents.length}</span>
-				)}
-			</label>
-
-			<input
-				type="text"
-				className="message-input"
-				placeholder={`Write a message in ${props.chatName}...`}
-				disabled={disabled}
-				value={input}
-				onChange={(e) => setInput(e.target.value)}
-				onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-			/>
-			<button
-				className="send-button"
-				disabled={disabled}
-				onClick={handleSendMessage}>
-				<img
-					src={sendIcon}
-					className="send-icon"
+			</div>
+			<div className="controls">
+				<input
+					type="file"
+					id="photo-upload"
+					multiple
+					accept="image/*"
+					style={{ display: "none" }}
+					onChange={handlePhotoUploadChange}
 				/>
-			</button>
+				<label
+					htmlFor="photo-upload"
+					className="attach-button">
+					<img src={photoIcon} />
+					{photos.length > 0 && (
+						<span className="badge">{photos.length}</span>
+					)}
+				</label>
+
+				<input
+					type="file"
+					id="document-upload"
+					multiple
+					style={{ display: "none" }}
+					onChange={handleDocumentUploadChange}
+				/>
+				<label
+					htmlFor="document-upload"
+					className="attach-button">
+					<img src={documentIcon} />
+					{documents.length > 0 && (
+						<span className="badge">{documents.length}</span>
+					)}
+				</label>
+
+				<input
+					type="text"
+					className="message-input"
+					placeholder={`Write a message in ${props.chatName}...`}
+					disabled={disabled}
+					value={input}
+					onChange={(e) => setInput(e.target.value)}
+					onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+				/>
+				<button
+					className="send-button"
+					disabled={disabled}
+					onClick={handleSendMessage}>
+					<img
+						src={sendIcon}
+						className="send-icon"
+					/>
+				</button>
+			</div>
 		</>
 	);
 };

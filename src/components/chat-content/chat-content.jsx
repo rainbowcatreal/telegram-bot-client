@@ -15,6 +15,7 @@ const ChatContent = (props) => {
 	const [photos, setPhotos] = useState({});
 	const [chatNames, setChatNames] = useState({});
 	const [chatMembersCount, setChatMembersCount] = useState({});
+	const [replyToMessageData, setReplyToMessageData] = useState(null);
 	const scrollRef = useRef(null);
 
 	function setMessages(callback) {
@@ -37,7 +38,6 @@ const ChatContent = (props) => {
 				if (!msg) continue;
 
 				const cid = msg.chat.id;
-				const senderId = msg.from?.id;
 
 				chatNameUpdates[cid] =
 					msg.chat.title || msg.chat.first_name || "Unknown chat";
@@ -140,9 +140,10 @@ const ChatContent = (props) => {
 	}
 
 	async function handleSendMessage(text, photos, documents) {
-		const data = await sendMessage(props.token, photos, documents, {
+		const data = await sendMessage(props.token, replyToMessageData, photos, documents, {
 			chat_id: props.chatId,
 			text,
+			reply_to_message_id: replyToMessageData?.message_id,
 			parse_mode: "Markdown",
 		});
 		if (!data) return;
@@ -153,6 +154,7 @@ const ChatContent = (props) => {
 				{
 					message_id: data.message_id,
 					text,
+					reply_to_message: replyToMessageData,
 					from: { me: true },
 				},
 			],
@@ -168,6 +170,15 @@ const ChatContent = (props) => {
 			}));
 		}
 	}
+
+	function handleReplyToMessage(messageId) {
+		const message = messages[props.chatId]?.find(m => m.message_id === messageId);
+		if (message) {
+			setReplyToMessageData(message);
+		}
+	}
+
+	useEffect(() => setReplyToMessageData(null), [props.chatId]);
 
 	const currentMessages = messages[props.chatId] || [];
 
@@ -193,8 +204,32 @@ const ChatContent = (props) => {
 									id={`msg-${msg.message_id}`}
 									className={classNames("message", {
 										sent: true,
-									})}>
+									})}
+									onDoubleClick={() => handleReplyToMessage(msg.message_id)}>
 									<div className="message-info">
+										{msg.reply_to_message && (
+											<div
+												className="reply-message"
+												onClick={() =>
+													scrollToMessage(
+														msg.reply_to_message
+															.message_id,
+													)
+												}
+												style={{ cursor: "pointer" }}>
+												<span className="reply-name">
+													{msg.reply_to_message.from
+														?.first_name ||
+														"Unknown"}
+												</span>
+												<br />
+												{msg.reply_to_message.text ||
+													msg.reply_to_message
+														.caption ||
+													"No text"}
+											</div>
+										)}
+
 										{photos[props.chatId]?.[
 											msg.message_id
 										] ? (
@@ -227,7 +262,8 @@ const ChatContent = (props) => {
 								<div
 									key={msg.message_id}
 									id={`msg-${msg.message_id}`}
-									className="message">
+									className="message"
+									onDoubleClick={() => handleReplyToMessage(msg.message_id)}>
 									<div className="message-avatar">
 										{msg.photoUrl ? (
 											<img
@@ -309,6 +345,8 @@ const ChatContent = (props) => {
 							chatName={chatNames[props.chatId]}
 							token={props.token}
 							onSendMessage={handleSendMessage}
+							replyToMessageData={replyToMessageData}
+							setReplyToMessageData={setReplyToMessageData}
 						/>
 					</div>
 				</>

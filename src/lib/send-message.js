@@ -1,9 +1,10 @@
-const sendMessage = async (token, photos = [], files = [], body) => {
+const sendMessage = async (token, replyToMessageData, photos = [], files = [], body) => {
 	let lastResult = null;
 
 	if (photos.length > 1) {
 		const formData = new FormData();
 		formData.append("chat_id", body.chat_id);
+		formData.append("reply_to_message_id", replyToMessageData?.message_id);
 
 		const media = photos.map((file, index) => {
 			const mediaItem = {
@@ -35,6 +36,7 @@ const sendMessage = async (token, photos = [], files = [], body) => {
 	} else if (photos.length === 1) {
 		const formData = new FormData();
 		formData.append("chat_id", body.chat_id);
+		formData.append("reply_to_message_id", replyToMessageData?.message_id);
 		formData.append("photo", photos[0]);
 
 		if (body.text) {
@@ -57,6 +59,7 @@ const sendMessage = async (token, photos = [], files = [], body) => {
 		for (const file of files) {
 			const formData = new FormData();
 			formData.append("chat_id", body.chat_id);
+			formData.append("reply_to_message_id", replyToMessageData?.message_id);
 			formData.append("document", file);
 
 			if (body.text && !photos.length && files.indexOf(file) === 0) {
@@ -85,6 +88,7 @@ const sendMessage = async (token, photos = [], files = [], body) => {
 				body: JSON.stringify({
 					chat_id: body.chat_id,
 					text: body.text,
+					reply_to_message_id: replyToMessageData?.message_id,
 					parse_mode: "Markdown",
 				}),
 			},
