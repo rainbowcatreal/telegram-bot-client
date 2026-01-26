@@ -35,4 +35,20 @@ const getProfileLink = async (token, chatId, isGroup) => {
 	return null;
 };
 
-export { getProfileLink };
+const getPhoto = async (token, message) => {
+	if (message.photo && message.photo.length > 0) {
+		const highResPhoto = message.photo[message.photo.length - 1];
+
+		const fileRes = await fetch(
+			`https://api.telegram.org/bot${token}/getFile?file_id=${highResPhoto.file_id}`,
+		);
+		const fileData = await fileRes.json();
+
+		if (fileData.ok) {
+			return `https://api.telegram.org/file/bot${token}/${fileData.result.file_path}`;
+		}
+	}
+	return null;
+};
+
+export { getProfileLink, getPhoto };

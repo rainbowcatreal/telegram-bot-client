@@ -1,46 +1,64 @@
 import { useState, useEffect, useRef } from "react";
 import classNames from "classnames";
-import { getProfileLink } from "../../lib/assets";
+import { getPhoto, getProfileLink } from "../../lib/assets";
 import { getChatMembersCount } from "../../lib/chat-info";
 import "./chat-content.css";
 import MessageInput from "../message-input/message-input";
 import sendMessage from "../../lib/send-message";
 
 const ChatContent = (props) => {
-	const [messages, setMessages] = useState({});
+	const [messages, setMessagesState] = useState(
+		localStorage.getItem("tg-bot-messages")
+			? JSON.parse(localStorage.getItem("tg-bot-messages"))
+			: {},
+	);
+	const [photos, setPhotos] = useState({});
 	const [chatNames, setChatNames] = useState({});
 	const [chatMembersCount, setChatMembersCount] = useState({});
 	const scrollRef = useRef(null);
 
+	function setMessages(callback) {
+		setMessagesState((prev) => {
+			const nextState = callback(prev);
+			localStorage.setItem("tg-bot-messages", JSON.stringify(nextState));
+			return nextState;
+		});
+	}
+
 	useEffect(() => {
-		const handleNewUpdates = (event) => {
+		const handleNewUpdates = async (event) => {
 			const newUpdates = event.detail;
 
-			newUpdates.forEach((update) => {
+			let chatNameUpdates = {};
+			let countUpdates = {};
+
+			for (const update of newUpdates) {
 				const msg = update.message || update.edited_message;
-				if (!msg) return;
+				if (!msg) continue;
 
 				const cid = msg.chat.id;
 				const senderId = msg.from?.id;
 
-				setChatNames((prev) => ({
-					...prev,
-					[cid]:
-						msg.chat.title || msg.chat.first_name || "Unknown chat",
-				}));
+				chatNameUpdates[cid] =
+					msg.chat.title || msg.chat.first_name || "Unknown chat";
 
-				getChatMembersCount(props.token, cid).then((count) => {
-					setChatMembersCount((prev) => ({
-						...prev,
-						[cid]: count,
-					}));
-				});
+				const count = await getChatMembersCount(props.token, cid);
+				countUpdates[cid] = count;
+
+				if (msg.photo) {
+					getPhoto(props.token, msg).then((url) => {
+						if (url)
+							setPhotos((prev) => ({
+								...prev,
+								[cid]: { ...prev[cid], [msg.message_id]: url },
+							}));
+					});
+				}
 
 				setMessages((prev) => {
 					const currentChatMsgs = prev[cid] || [];
-
 					if (
-						currentChatMsgs.find(
+						currentChatMsgs.some(
 							(m) => m.message_id === msg.message_id,
 						)
 					)
@@ -48,29 +66,50 @@ const ChatContent = (props) => {
 
 					const newMessage = { ...msg, photoUrl: null };
 
-					if (senderId) {
-						getProfileLink(props.token, senderId, false).then(
-							(url) => {
-								if (url) {
-									setMessages((latest) => ({
-										...latest,
-										[cid]: latest[cid].map((m) =>
-											m.from?.id === senderId
-												? { ...m, photoUrl: url }
-												: m,
-										),
-									}));
-								}
-							},
-						);
+					const isChannel =
+						msg.from?.id === 777000 ||
+						msg.from?.username === "Channel_Bot";
+					const effectiveSenderId = isChannel
+						? msg.sender_chat?.id
+						: msg.from?.id;
+
+					if (effectiveSenderId) {
+						getProfileLink(
+							props.token,
+							effectiveSenderId,
+							isChannel,
+						).then((url) => {
+							if (url)
+								updateMessageAvatar(
+									cid,
+									effectiveSenderId,
+									url,
+								);
+						});
 					}
 
-					return {
-						...prev,
-						[cid]: [...currentChatMsgs, newMessage],
-					};
+					return { ...prev, [cid]: [...currentChatMsgs, newMessage] };
 				});
-			});
+			}
+
+			setChatNames((prev) => ({ ...prev, ...chatNameUpdates }));
+			setChatMembersCount((prev) => ({ ...prev, ...countUpdates }));
+		};
+
+		const updateMessageAvatar = (cid, targetId, url) => {
+			setMessages((latest) => ({
+				...latest,
+				[cid]: (latest[cid] || []).map((m) => {
+					const currentSenderId =
+						m.from?.id === 777000 ||
+						m.from.username === "Channel_Bot"
+							? m.sender_chat?.id
+							: m.from?.id;
+					return currentSenderId === targetId
+						? { ...m, photoUrl: url }
+						: m;
+				}),
+			}));
 		};
 
 		window.addEventListener("tg-updates", handleNewUpdates);
@@ -83,7 +122,6 @@ const ChatContent = (props) => {
 			scrollRef.current.scrollIntoView({ behavior: "smooth" });
 		}
 	}, [messages, props.chatId]);
-
 
 	function scrollToMessage(targetId) {
 		const element = document.getElementById(`msg-${targetId}`);
@@ -99,24 +137,36 @@ const ChatContent = (props) => {
 		} else {
 			console.warn("Message to jump not found");
 		}
-	};
+	}
 
-	async function handleSendMessage(toSend) {
-		const data = await sendMessage(props.token, {
+	async function handleSendMessage(text, photos, documents) {
+		const data = await sendMessage(props.token, photos, documents, {
 			chat_id: props.chatId,
-			text: toSend,
+			text,
+			parse_mode: "Markdown",
 		});
+		if (!data) return;
 		setMessages((prev) => ({
 			...prev,
 			[props.chatId]: [
 				...(prev[props.chatId] || []),
 				{
 					message_id: data.message_id,
-					text: toSend,
+					text,
 					from: { me: true },
 				},
 			],
 		}));
+		if (photos.length > 0) {
+			const localUrl = URL.createObjectURL(photos[0]);
+			setPhotos((prev) => ({
+				...prev,
+				[props.chatId]: {
+					...prev[props.chatId],
+					[data.message_id]: localUrl,
+				},
+			}));
+		}
 	}
 
 	const currentMessages = messages[props.chatId] || [];
@@ -145,9 +195,32 @@ const ChatContent = (props) => {
 										sent: true,
 									})}>
 									<div className="message-info">
-										<p className="message-text">
-											{msg.text}
-										</p>
+										{photos[props.chatId]?.[
+											msg.message_id
+										] ? (
+											<img
+												src={
+													photos[props.chatId][
+														msg.message_id
+													]
+												}
+												className="chat-image"
+											/>
+										) : null}
+
+										{(msg.text || msg.caption) && (
+											<p className="message-text">
+												{msg.text || msg.caption}
+											</p>
+										)}
+
+										{!msg.text &&
+											!msg.caption &&
+											!photos[props.chatId]?.[
+												msg.message_id
+											] && (
+												<i>Unsupported message type</i>
+											)}
 									</div>
 								</div>
 							) : (
@@ -163,29 +236,68 @@ const ChatContent = (props) => {
 												alt="avatar"
 											/>
 										) : (
-											(msg.from?.first_name || "?")[0]
+											(msg.from.id === 777000 ||
+											msg.from.username === "Channel_Bot"
+												? msg.sender_chat.title
+												: msg.from?.first_name ||
+													"?")[0]
 										)}
 									</div>
 									<div className="message-info">
 										<span className="sender-name">
-											{msg.from?.first_name}
+											{msg.from.id === 777000 ||
+											msg.from.username === "Channel_Bot"
+												? msg.sender_chat.title
+												: msg.from?.first_name}
 										</span>
+
 										{msg.reply_to_message && (
 											<div
 												className="reply-message"
-												onClick={() => scrollToMessage(msg.reply_to_message.message_id)}
-                    							style={{ cursor: "pointer" }}
-											>
+												onClick={() =>
+													scrollToMessage(
+														msg.reply_to_message
+															.message_id,
+													)
+												}
+												style={{ cursor: "pointer" }}>
 												<span className="reply-name">
-													{msg.reply_to_message.from?.first_name || "Unknown"}
+													{msg.reply_to_message.from
+														?.first_name ||
+														"Unknown"}
 												</span>
 												<br />
-												{msg.reply_to_message.text}
+												{msg.reply_to_message.text ||
+													msg.reply_to_message
+														.caption ||
+													"No text"}
 											</div>
 										)}
-										<p className="message-text">
-											{msg.text}
-										</p>
+
+										{photos[props.chatId]?.[
+											msg.message_id
+										] ? (
+											<img
+												src={
+													photos[props.chatId][
+														msg.message_id
+													]
+												}
+												className="chat-image"
+											/>
+										) : null}
+
+										{(msg.text || msg.caption) && (
+											<p className="message-text">
+												{msg.text || msg.caption}
+											</p>
+										)}
+
+										{!msg.text &&
+											!msg.caption &&
+											!msg.photo && (
+												<i>Unsupported message type</i>
+											)}
 									</div>
 								</div>
 							),

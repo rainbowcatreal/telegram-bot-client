@@ -6,6 +6,7 @@ import "./chats.css";
 const Chats = (props) => {
 	const [chats, setChats] = useState([]);
 	const [lastMessages, setLastMessages] = useState({});
+	const [searchTerm, setSearchTerm] = useState("");
 
 	useEffect(() => {
 		const handleNewUpdates = (event) => {
@@ -19,8 +20,13 @@ const Chats = (props) => {
 						[msg.chat.id]: {
 							text:
 								msg.text ||
+								msg.caption ||
 								(msg.photo ? "📷 Photo" : "🔗 Attachment"),
-							sender: msg.from?.first_name || "Unknown",
+							sender:
+								msg.from.id === 777000 ||
+								msg.from.username === "Channel_Bot"
+									? msg.sender_chat?.title
+									: msg.from?.first_name || "Unknown",
 						},
 					}));
 					setChats((prev) => {
@@ -62,42 +68,61 @@ const Chats = (props) => {
 
 	return (
 		<div className="chats-container">
-			<h1>Chats</h1>
+			<div className="header">
+				<input
+					type="text"
+					placeholder="Search chats..."
+					className="search-input"
+					onChange={(e) => setSearchTerm(e.target.value)}
+				/>
+			</div>
 			{chats.length === 0 ? (
 				<div className="no-chats">No chats found</div>
 			) : (
 				<ul>
-					{chats.map((chat) => (
-						<li
-							key={chat.id}
-							className={classNames("chat-item", {
-								selected: props.selectedChatId === chat.id,
-							})}
-							onClick={() => props.onChatSelect(chat.id)}>
-							<div className="chat-avatar">
-								{chat.photoUrl ? (
-									<img
-										src={chat.photoUrl}
-										className="avatar-img"
-									/>
-								) : (
-									(chat.title || chat.first_name || "?")[0]
-								)}
-							</div>
-							<div className="chat-info">
-								<h3 className="chat-name">
-									{chat.title ||
-										`${chat.first_name || ""} ${chat.last_name || ""}`}
-								</h3>
-								<p className="chat-last-message">
-									{lastMessages[chat.id]?.sender +
-										": " +
-										lastMessages[chat.id]?.text ||
-										chat.type}
-								</p>
-							</div>
-						</li>
-					))}
+					{chats
+						.filter(
+							(chat) =>
+								chat.title
+									?.toLowerCase()
+									.includes(searchTerm.toLowerCase()) ||
+								chat.first_name
+									?.toLowerCase()
+									.includes(searchTerm.toLowerCase()),
+						)
+						.map((chat) => (
+							<li
+								key={chat.id}
+								className={classNames("chat-item", {
+									selected: props.selectedChatId === chat.id,
+								})}
+								onClick={() => props.onChatSelect(chat.id)}>
+								<div className="chat-avatar">
+									{chat.photoUrl ? (
+										<img
+											src={chat.photoUrl}
+											className="avatar-img"
+										/>
+									) : (
+										(chat.title ||
+											chat.first_name ||
+											"?")[0]
+									)}
+								</div>
+								<div className="chat-info">
+									<h3 className="chat-name">
+										{chat.title ||
+											`${chat.first_name || ""} ${chat.last_name || ""}`}
+									</h3>
+									<p className="chat-last-message">
+										{lastMessages[chat.id]?.sender +
+											": " +
+											lastMessages[chat.id]?.text ||
+											chat.type}
+									</p>
+								</div>
+							</li>
+						))}
 				</ul>
 			)}
 		</div>
