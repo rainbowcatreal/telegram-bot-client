@@ -24,7 +24,8 @@ const Chats = (props) => {
 								(msg.photo ? "📷 Photo" : "🔗 Attachment"),
 							sender:
 								msg.from.id === 777000 ||
-								msg.from.username === "Channel_Bot"
+								msg.from.username === "Channel_Bot" ||
+             msg.from.username === "GroupAnonymousBot"
 									? msg.sender_chat?.title
 									: msg.from?.first_name || "Unknown",
 						},

@@ -68,7 +68,8 @@ const ChatContent = (props) => {
 
 					const isChannel =
 						msg.from?.id === 777000 ||
-						msg.from?.username === "Channel_Bot";
+						msg.from?.username === "Channel_Bot" ||
+         msg.from?.username === "GroupAnonymousBot";
 					const effectiveSenderId = isChannel
 						? msg.sender_chat?.id
 						: msg.from?.id;
@@ -102,7 +103,8 @@ const ChatContent = (props) => {
 				[cid]: (latest[cid] || []).map((m) => {
 					const currentSenderId =
 						m.from?.id === 777000 ||
-						m.from.username === "Channel_Bot"
+						m.from.username === "Channel_Bot" ||
+         m.from.username === "GroupAnonymousBot"
 							? m.sender_chat?.id
 							: m.from?.id;
 					return currentSenderId === targetId
@@ -273,7 +275,8 @@ const ChatContent = (props) => {
 											/>
 										) : (
 											(msg.from.id === 777000 ||
-											msg.from.username === "Channel_Bot"
+											msg.from.username === "Channel_Bot" ||
+                 msg.from.username === "GroupAnonymousBot"
 												? msg.sender_chat.title
 												: msg.from?.first_name ||
 													"?")[0]
@@ -282,7 +285,8 @@ const ChatContent = (props) => {
 									<div className="message-info">
 										<span className="sender-name">
 											{msg.from.id === 777000 ||
-											msg.from.username === "Channel_Bot"
+											msg.from.username === "Channel_Bot" ||
+                 msg.from.username === "GroupAnonymousBot"
 												? msg.sender_chat.title
 												: msg.from?.first_name}
 										</span>
