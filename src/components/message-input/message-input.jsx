@@ -48,7 +48,7 @@ const MessageInput = (props) => {
 		<>
 			<div className="reply-to-message-container">
 				{props.replyToMessageData && (
-					<div className="reply-message">
+					<div className="reply-message" onClick={() => {props.setReplyToMessageData(null)}}>
 						<span className="reply-name">
 							{props.replyToMessageData.from?.first_name ?
 								`Reply to ${props.replyToMessageData.from.first_name}` :

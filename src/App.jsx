@@ -28,6 +28,7 @@ const App = () => {
 				<>
 					<Chats
 						token={token}
+         setToken={handleSetToken}
 						onChatSelect={(id) => setActiveChatId(id)}
 						selectedChatId={activeChatId}
 					/>

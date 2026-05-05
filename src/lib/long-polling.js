@@ -14,6 +14,7 @@ const longPolling = async (token) => {
 
 			if (data.ok && data.result.length > 0) {
 				lastUpdateId = Math.max(...data.result.map((u) => u.update_id));
+      console.log(data.result);
 
 				const event = new CustomEvent("tg-updates", {
 					detail: data.result,

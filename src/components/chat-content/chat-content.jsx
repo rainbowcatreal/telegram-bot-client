@@ -3,8 +3,10 @@ import classNames from "classnames";
 import { getPhoto, getProfileLink } from "../../lib/assets";
 import { getChatMembersCount } from "../../lib/chat-info";
 import "./chat-content.css";
+import Message from "../message/message";
 import MessageInput from "../message-input/message-input";
 import sendMessage from "../../lib/send-message";
+import ErrorBoundary from "../protect/protect.jsx"
 
 const ChatContent = (props) => {
 	const [messages, setMessagesState] = useState(
@@ -34,7 +36,7 @@ const ChatContent = (props) => {
 			let countUpdates = {};
 
 			for (const update of newUpdates) {
-				const msg = update.message || update.edited_message;
+				const msg = update.message || update.edited_message || update.channel_post || update.edited_channel_post;
 				if (!msg) continue;
 
 				const cid = msg.chat.id;
@@ -66,10 +68,10 @@ const ChatContent = (props) => {
 
 					const newMessage = { ...msg, photoUrl: null };
 
-					const isChannel =
-						msg.from?.id === 777000 ||
-						msg.from?.username === "Channel_Bot" ||
-         msg.from?.username === "GroupAnonymousBot";
+					const isChannel = "sender_chat" in msg;
+						//msg.from?.id === 777000 ||
+						//msg.from?.username === "Channel_Bot" ||
+         //msg.from?.username === "GroupAnonymousBot";
 					const effectiveSenderId = isChannel
 						? msg.sender_chat?.id
 						: msg.from?.id;
@@ -102,9 +104,7 @@ const ChatContent = (props) => {
 				...latest,
 				[cid]: (latest[cid] || []).map((m) => {
 					const currentSenderId =
-						m.from?.id === 777000 ||
-						m.from.username === "Channel_Bot" ||
-         m.from.username === "GroupAnonymousBot"
+						"sender_chat" in m
 							? m.sender_chat?.id
 							: m.from?.id;
 					return currentSenderId === targetId
@@ -153,12 +153,7 @@ const ChatContent = (props) => {
 			...prev,
 			[props.chatId]: [
 				...(prev[props.chatId] || []),
-				{
-					message_id: data.message_id,
-					text,
-					reply_to_message: replyToMessageData,
-					from: { me: true },
-				},
+				data,
 			],
 		}));
 		if (photos.length > 0) {
@@ -188,159 +183,21 @@ const ChatContent = (props) => {
 		<div className="chat-content">
 			{!props.chatId ? (
 				<div className="no-messages">
-					Select a chat to start messaging
+					Выберите чат, чтобы начать общение
 				</div>
 			) : currentMessages.length === 0 ? (
-				<div className="no-messages">No messages here yet...</div>
+				<div className="no-messages">Тут пока нет сообщений...</div>
 			) : (
 				<>
 					<div className="chat-header">
 						<h1>{chatNames[props.chatId]}</h1>
-						<span>{chatMembersCount[props.chatId]} members</span>
+						<span>{chatMembersCount[props.chatId]} участников</span>
 					</div>
 					<div className="messages-list">
 						{currentMessages.map((msg) =>
-							msg.from.me ? (
-								<div
-									key={msg.message_id}
-									id={`msg-${msg.message_id}`}
-									className={classNames("message", {
-										sent: true,
-									})}
-									onDoubleClick={() => handleReplyToMessage(msg.message_id)}>
-									<div className="message-info">
-										{msg.reply_to_message && (
-											<div
-												className="reply-message"
-												onClick={() =>
-													scrollToMessage(
-														msg.reply_to_message
-															.message_id,
-													)
-												}
-												style={{ cursor: "pointer" }}>
-												<span className="reply-name">
-													{msg.reply_to_message.from
-														?.first_name ||
-														"Unknown"}
-												</span>
-												<br />
-												{msg.reply_to_message.text ||
-													msg.reply_to_message
-														.caption ||
-													"No text"}
-											</div>
-										)}
-
-										{photos[props.chatId]?.[
-											msg.message_id
-										] ? (
-											<img
-												src={
-													photos[props.chatId][
-														msg.message_id
-													]
-												}
-												className="chat-image"
-											/>
-										) : null}
-
-										{(msg.text || msg.caption) && (
-											<p className="message-text">
-												{msg.text || msg.caption}
-											</p>
-										)}
-
-										{!msg.text &&
-											!msg.caption &&
-											!photos[props.chatId]?.[
-												msg.message_id
-											] && (
-												<i>Unsupported message type</i>
-											)}
-									</div>
-								</div>
-							) : (
-								<div
-									key={msg.message_id}
-									id={`msg-${msg.message_id}`}
-									className="message"
-									onDoubleClick={() => handleReplyToMessage(msg.message_id)}>
-									<div className="message-avatar">
-										{msg.photoUrl ? (
-											<img
-												src={msg.photoUrl}
-												className="avatar-img"
-												alt="avatar"
-											/>
-										) : (
-											(msg.from.id === 777000 ||
-											msg.from.username === "Channel_Bot" ||
-                 msg.from.username === "GroupAnonymousBot"
-												? msg.sender_chat.title
-												: msg.from?.first_name ||
-													"?")[0]
-										)}
-									</div>
-									<div className="message-info">
-										<span className="sender-name">
-											{msg.from.id === 777000 ||
-											msg.from.username === "Channel_Bot" ||
-                 msg.from.username === "GroupAnonymousBot"
-												? msg.sender_chat.title
-												: msg.from?.first_name}
-										</span>
-
-										{msg.reply_to_message && (
-											<div
-												className="reply-message"
-												onClick={() =>
-													scrollToMessage(
-														msg.reply_to_message
-															.message_id,
-													)
-												}
-												style={{ cursor: "pointer" }}>
-												<span className="reply-name">
-													{msg.reply_to_message.from
-														?.first_name ||
-														"Unknown"}
-												</span>
-												<br />
-												{msg.reply_to_message.text ||
-													msg.reply_to_message
-														.caption ||
-													"No text"}
-											</div>
-										)}
-
-										{photos[props.chatId]?.[
-											msg.message_id
-										] ? (
-											<img
-												src={
-													photos[props.chatId][
-														msg.message_id
-													]
-												}
-												className="chat-image"
-											/>
-										) : null}
-
-										{(msg.text || msg.caption) && (
-											<p className="message-text">
-												{msg.text || msg.caption}
-											</p>
-										)}
-
-										{!msg.text &&
-											!msg.caption &&
-											!msg.photo && (
-												<i>Unsupported message type</i>
-											)}
-									</div>
-								</div>
-							),
+            <ErrorBoundary>
+              <Message message={msg} photo={photos[props.chatId]?.[msg.message_id]} />
+            </ErrorBoundary>
 						)}
 						<div ref={scrollRef} />
 					</div>
